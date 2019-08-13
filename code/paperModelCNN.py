@@ -33,17 +33,19 @@ if __name__ == "__main__":
     cTime = time.localtime()
     KFOLD = 5
     logPath = "./paperModel_CNN_%04d%02d%02d_" % (cTime.tm_year, cTime.tm_mon, cTime.tm_mday) + str(KFOLD) + "fold.log"
-    BATCHSIZE = 100
-    filePath = '../../data/newData/'
-    patternName = ['1','2','3','4','5','6','7','8','9','a']
+    BATCHSIZE = 10
+    filePath = '../data/'
+    #patternName = ['1','2','3','4','5','6','7','8','9','a']
+    patternName = ['1','2','3','4','5']
 
-    numLabel = 10
+    numLabel = 5
     #for patternIndex in range(1):
     bf.allNumber = 0
     data = []
-    for fileIndex in range(1,501):
+    #for fileIndex in range(1,501):
+    for fileIndex in range(1,11):
         #    for fileIndex in range(1,2):
-        for patternIndex in range(10):
+        for patternIndex in range(5):
             fileName = patternName[patternIndex]+"/"+patternName[patternIndex]+"_"+str(fileIndex)+".csv"
             if (patternName[patternIndex] == 'a'):
                 label = '0'
@@ -74,9 +76,9 @@ if __name__ == "__main__":
             yTrain.append(bf.oneHotLabel(int(d[300]), numLabel))
 
         #       on Imac the GPU is not working. so
-        with tf.device('/gpu:1'):
+        with tf.device('/gpu:2'):
             inputX = tf.placeholder(tf.float32, [None, 300])
-            outputY = tf.placeholder(tf.float32, [None, 10])
+            outputY = tf.placeholder(tf.float32, [None, 5])
 
             #1 * 100 * 3
             W_conv1 = weight_variable([3, 1, 1, 9]) #width, height, channel input, channel output
@@ -135,8 +137,8 @@ if __name__ == "__main__":
             #  keep_prob = tf.placeholder(tf.float32)
             h_fc1_drop2 = tf.nn.dropout(h_fc2, keep_prob)
 
-            W_fc3 = weight_variable([144, 10])
-            b_fc3 = bias_variable([10])
+            W_fc3 = weight_variable([144, 5])
+            b_fc3 = bias_variable([5])
             y_conv = tf.nn.softmax(tf.matmul(h_fc1_drop2, W_fc3) + b_fc3)
 
             # Define loss and optimizer
@@ -151,7 +153,7 @@ if __name__ == "__main__":
         sess.run(tf.global_variables_initializer())
 
         xTrain = array(xTrain).reshape(len(xTrain), 300)
-        yTrain = array(yTrain).reshape(len(yTrain), 10)
+        yTrain = array(yTrain).reshape(len(yTrain), 5)
 
         bf.mLog("training Start", logPath)
         for j in range(15001):

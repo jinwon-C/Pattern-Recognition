@@ -36,9 +36,10 @@ def mLog(msg, logPath):
 
 def oneHotLabel(label, numLabel):
     result = [0] * numLabel
-    result[int(label)] = 1
+    result[int(label)-1] = 1
 
     return result
+
 def onlyFileRead(filePath, fileName, label):
     dFile = open(filePath + fileName, 'r')
     csvReader = csv.reader(dFile)
