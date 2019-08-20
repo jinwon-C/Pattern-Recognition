@@ -12,7 +12,6 @@ from sklearn.model_selection import KFold
 
 #os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' # imac setting.
 
-
 def weight_variable(shape):
     initial = tf.truncated_normal(shape, stddev=0.1)
     return tf.Variable(initial)
@@ -32,20 +31,24 @@ def max_pool_2x2(x):
 if __name__ == "__main__":
     cTime = time.localtime()
     KFOLD = 5
-    logPath = "./paperModel_CNN_%04d%02d%02d_" % (cTime.tm_year, cTime.tm_mon, cTime.tm_mday) + str(KFOLD) + "fold.log"
-    BATCHSIZE = 10
-    filePath = '../data/'
-    #patternName = ['1','2','3','4','5','6','7','8','9','a']
-    patternName = ['1','2','3','4','5']
+    logDir = "../log/paperModel_CNN_%04d%02d%02d_" % (cTime.tm_year, cTime.tm_mon, cTime.tm_mday) + str(KFOLD) + "fold/"
+    logFile = "%02d:%02d:%02d" % (cTime.tm_hour, cTime.tm_min, cTime.tm_sec) + ".log"
+    if not os.path.isdir(logDir):
+        os.mkdir(logDir)
+    logPath = logDir + logFile
+    BATCHSIZE = 50
+    filePath = '../data/20190816/Acceloremeter/'
+    patternName = ['1','2','3','4','5','6','7','8','9','a']
+    #patternName = ['1','2','3','4','5']
 
-    numLabel = 5
+    numLabel = len(patternName)
     #for patternIndex in range(1):
     bf.allNumber = 0
     data = []
     #for fileIndex in range(1,501):
-    for fileIndex in range(1,11):
+    for fileIndex in range(1,51):
         #    for fileIndex in range(1,2):
-        for patternIndex in range(5):
+        for patternIndex in range(10):
             fileName = patternName[patternIndex]+"/"+patternName[patternIndex]+"_"+str(fileIndex)+".csv"
             if (patternName[patternIndex] == 'a'):
                 label = '0'
@@ -73,12 +76,16 @@ if __name__ == "__main__":
         yTrain = []
         for d in dTrain:
             xTrain.append(d[0:300])
+
+            #print("yTrain : ",(int(d[300])))
+            #print("d[0:301 : " , d[0:301])
+            #print("d : ",(d[300]))
             yTrain.append(bf.oneHotLabel(int(d[300]), numLabel))
 
         #       on Imac the GPU is not working. so
-        with tf.device('/gpu:2'):
+        with tf.device('/gpu:3'):
             inputX = tf.placeholder(tf.float32, [None, 300])
-            outputY = tf.placeholder(tf.float32, [None, 5])
+            outputY = tf.placeholder(tf.float32, [None, 10])
 
             #1 * 100 * 3
             W_conv1 = weight_variable([3, 1, 1, 9]) #width, height, channel input, channel output
@@ -137,8 +144,8 @@ if __name__ == "__main__":
             #  keep_prob = tf.placeholder(tf.float32)
             h_fc1_drop2 = tf.nn.dropout(h_fc2, keep_prob)
 
-            W_fc3 = weight_variable([144, 5])
-            b_fc3 = bias_variable([5])
+            W_fc3 = weight_variable([144, 10])
+            b_fc3 = bias_variable([10])
             y_conv = tf.nn.softmax(tf.matmul(h_fc1_drop2, W_fc3) + b_fc3)
 
             # Define loss and optimizer
@@ -153,10 +160,12 @@ if __name__ == "__main__":
         sess.run(tf.global_variables_initializer())
 
         xTrain = array(xTrain).reshape(len(xTrain), 300)
-        yTrain = array(yTrain).reshape(len(yTrain), 5)
+        yTrain = array(yTrain).reshape(len(yTrain), 10)
 
         bf.mLog("training Start", logPath)
-        for j in range(15001):
+        
+        for j in range(30001):
+
             batch_X, batch_Y = bf.getBatchData(BATCHSIZE, xTrain, yTrain)
             train_step.run(feed_dict={inputX: batch_X, outputY: batch_Y, keep_prob:0.5})
             if j % BATCHSIZE == 0:
