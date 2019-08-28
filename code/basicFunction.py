@@ -50,9 +50,11 @@ def onlyFileRead(filePath, fileName, label):
     reData = []
 
     for csvData in csvReader:
-        rawDataX = rawDataX + csvData[2:3]
-        rawDataY = rawDataY + csvData[3:4]
-        rawDataZ = rawDataZ + csvData[4:5]
+        count = csvData[2:3]    
+        if len(count[0]):
+            rawDataX = rawDataX + csvData[2:3]
+            rawDataY = rawDataY + csvData[3:4]
+            rawDataZ = rawDataZ + csvData[4:5]
 
     dFile.close()
     reData.append(rawDataX)
@@ -128,7 +130,6 @@ def fileRead(filePath, fileName, label, sampleSize = 11):
         rawDataX = rawDataX + csvData[1:2]
         rawDataY = rawDataY + csvData[2:3]
         rawDataZ = rawDataZ + csvData[3:4]
-
     dFile.close()
 
     if sampleSize != 1:
@@ -137,7 +138,6 @@ def fileRead(filePath, fileName, label, sampleSize = 11):
         deltaT = 100-len(rawDataX)
 
     deltaT = int(deltaT)
-
     for i in range(sampleSize):
         dataX = []
         dataY = []
