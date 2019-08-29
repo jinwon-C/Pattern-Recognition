@@ -47,6 +47,7 @@ def onlyFileRead(filePath, fileName, label):
     rawDataX = []
     rawDataY = []
     rawDataZ = []
+    audioData = []
     reData = []
 
     for csvData in csvReader:
@@ -56,28 +57,15 @@ def onlyFileRead(filePath, fileName, label):
             rawDataY = rawDataY + csvData[3:4]
             rawDataZ = rawDataZ + csvData[4:5]
 
+        count = csvData[5:6]
+        if len(count[0]):
+            audioData = audioData + csvData[5:6]
+
     dFile.close()
     reData.append(rawDataX)
     reData.append(rawDataY)
     reData.append(rawDataZ)
-    reData.append(label)
-
-    return reData
-
-def audioFileRead(filePath, fileName, label):
-    dFile = open(filePath + fileName, 'r')
-    csvReader = csv.reader(dFile)
-
-    rawData = []
-    reData = []
-
-    for csvData in csvReader:
-        count = csvData[5:6]    
-        if len(count[0]):
-            rawData = rawData + csvData[5:6]
-
-    dFile.close()
-    reData.append(rawData)
+    reData.append(audioData)
     reData.append(label)
 
     return reData
