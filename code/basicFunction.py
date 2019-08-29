@@ -64,6 +64,24 @@ def onlyFileRead(filePath, fileName, label):
 
     return reData
 
+def audioFileRead(filePath, fileName, label):
+    dFile = open(filePath + fileName, 'r')
+    csvReader = csv.reader(dFile)
+
+    rawData = []
+    reData = []
+
+    for csvData in csvReader:
+        count = csvData[5:6]    
+        if len(count[0]):
+            rawData = rawData + csvData[5:6]
+
+    dFile.close()
+    reData.append(rawData)
+    reData.append(label)
+
+    return reData
+
 def onlySampleSize(rawData, sampleSize):
 
     reData = []
@@ -111,6 +129,42 @@ def onlySampleSize(rawData, sampleSize):
                 dataY.append(rawDataY[len(rawDataY)-1])
                 dataZ.append(rawDataZ[len(rawDataZ)-1])
             tmp = dataX + dataY + dataZ
+            tmp.append(label)
+            reData.append(tmp)
+
+    return reData
+
+
+def audioSampleSize(rawData, sampleSize):
+
+    reData = []
+    for rDataset in rawData:
+        rawDataX = rDataset[0]
+        label = rDataset[1]
+        if sampleSize != 1:
+            deltaT = (100-len(rawDataX))/(sampleSize-1)
+        else :
+            deltaT = 100-len(rawDataX)
+
+        deltaT = int(deltaT)
+        deltaT = 3414
+
+        for i in range(sampleSize):
+            dataX = []
+            tmpX = []
+
+            for frontIndex in range(i):
+                for index in range(deltaT):
+                    tmpX.append(rawDataX[0])
+            dataX = tmpX + rawDataX
+            tmpX = []
+            for rearIndex in range(sampleSize-i-1):
+                for index in range(deltaT):
+                    tmpX.append(rawDataX[len(rawDataX) - 1])
+            dataX = dataX + tmpX
+            for otherIndex in range(deltaT):
+                dataX.append(rawDataX[len(rawDataX)-1])
+            tmp = dataX 
             tmp.append(label)
             reData.append(tmp)
 
