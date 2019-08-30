@@ -78,6 +78,7 @@ def onlySampleSize(rawData, sampleSize):
         rawDataY = rDataset[1]
         rawDataZ = rDataset[2]
         label = rDataset[3]
+        rawDataAud = rDataset[4]
         if sampleSize != 1:
             deltaT = (100-len(rawDataX))/(sampleSize-1)
         else :
@@ -89,9 +90,11 @@ def onlySampleSize(rawData, sampleSize):
             dataX = []
             dataY = []
             dataZ = []
+            dataAud = []
             tmpY = []
             tmpZ = []
             tmpX = []
+            tmpAud = []
 
             for frontIndex in range(i):
                 for index in range(deltaT):
@@ -117,6 +120,18 @@ def onlySampleSize(rawData, sampleSize):
                 dataY.append(rawDataY[len(rawDataY)-1])
                 dataZ.append(rawDataZ[len(rawDataZ)-1])
             tmp = dataX + dataY + dataZ
+
+            for frontIndex in range(i):
+                for index in range(3414):
+                    tmpAud.append(rawDataAud[0])
+            dataAud = tmpAud + rawDataAud
+            tmp = tmp + dataAud
+           # tmpAud = []
+           # for rearIndex in range(sampleSize-i-1):
+           #     for index in range(3414):
+           #         tmpAud.append(rawDataAud[len(rawDataAud)-1])
+           # dataAud = dataAud + tmpAud
+
             tmp.append(label)
             reData.append(tmp)
 

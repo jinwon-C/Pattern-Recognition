@@ -93,10 +93,11 @@ if __name__ == "__main__":
 		aud_yTrain = []
 		for d in dTrain:
 			acc_xTrain.append(d[0:300])
-			acc_yTrain.append(bf.oneHotLabel(int(d[300]), numLabel))
-			#aud_xTrain.append(d[0:numAudioData*numFreq])
-			#aud_yTrain.append(bf.oneHotLabel(int(d[-1]), numLabel))
-
+			aud_xTrain.append(d[300:300+numAudioData*numFreq])
+			acc_yTrain.append(bf.oneHotLabel(int(d[-1]), numLabel))
+			aud_yTrain.append(bf.oneHotLabel(int(d[-1]), numLabel))
+		print('acc_xTrain : ', len(acc_xTrain))
+		print('aud_xTrain : ', len(aud_xTrain))
 	#       on Imac the GPU is not working. so
 		with tf.device('/gpu:3'):
 			acc_inputX = tf.placeholder(tf.float32, [None, 300])
@@ -235,130 +236,54 @@ if __name__ == "__main__":
 		acc_xTrain = array(acc_xTrain).reshape(len(acc_xTrain), 300)
 		acc_yTrain = array(acc_yTrain).reshape(len(acc_yTrain), 10)
 
+		print('acc_xTrain : ', (acc_xTrain[0]))
+		print('aud_xTrain : ', (aud_xTrain[0]))
+		aud_xTrain = array(aud_xTrain).reshape(len(aud_xTrain), 3414)
+		aud_yTrain = array(aud_yTrain).reshape(len(aud_yTrain), 10)
+
 		bf.mLog("training Start", logPath)
 
-	for j in range(51):
-		batch_X, batch_Y = bf.getBatchData(BATCHSIZE, acc_xTrain, acc_yTrain)
-		train_step1.run(session=sess, feed_dict={acc_inputX: batch_X, acc_outputY: batch_Y, keep_prob:0.5})
-		if j % BATCHSIZE == 0:
-			train_accuracy = accuracy1.eval(session=sess, feed_dict={acc_inputX: batch_X, acc_outputY: batch_Y, keep_prob:1.0})
-			bf.mLog("step %d, accuracy %g" % (j, train_accuracy), logPath)
-	bf.mLog("training Finish", logPath)
-
-	dTest = bf.onlySampleSize(dataTest, 1)
-
-	acc_xTest = []
-	acc_yTest = []
-	for d in dTest:
-		acc_xTest.append(d[0:300])
-		acc_yTest.append(bf.oneHotLabel(int(d[300]), numLabel))
-
-	acc_xTest = array(acc_xTest).reshape(len(acc_xTest), 300)
-	bf.mLog("test Start", logPath)
-	yPreTmp = tf.argmax(y_conv1, 1)
-	val_acc, yPred = sess.run([accuracy1, yPreTmp], feed_dict={acc_inputX: acc_xTest, acc_outputY: acc_yTest, keep_prob: 1.0})
-	yTrue = np.argmax(acc_yTest, 1)
-	bf.mLog("test finish", logPath)
-
-	result_accuracy[count] = accuracy_score(yTrue, yPred)
-	result_precision[count] = precision_score(yTrue, yPred, average = 'macro')
-	result_recall[count] = recall_score(yTrue, yPred, average = 'macro')
-	result_f1Score[count] = f1_score(yTrue, yPred, average = 'macro')
-	result_confusion = str(confusion_matrix(yTrue, yPred))
-	bf.mLog("%d-fold %dth" % (KFOLD, count+1), logPath)
-	bf.mLog("accuracy : " + str(result_accuracy[count]), logPath)
-	bf.mLog("precision : " + str(result_precision[count]), logPath)
-	bf.mLog("recall : " + str(result_recall[count]), logPath)
-	bf.mLog("f1 Score : " +str(result_f1Score[count]), logPath)
-	bf.mLog("confution matrix" + result_confusion, logPath)
-	count = count + 1
-
-	sess.close()
-
-	for train_audIndex, test_audIndex in kf.split(data):
-		audDataTrain, audDataTest = data[train_audIndex], data[test_audIndex]
-
-		ddTrain = bf.audioSampleSize(audDataTrain, 1)
-		aud_xTrain = []
-		aud_yTrain = []
-		for dd in ddTrain:
-			#print('dd : ', len(dd))
-			#print('dd : ', dd)
-			aud_xTrain.append(dd[0:numAudioData*numFreq])
-			aud_yTrain.append(bf.oneHotLabel(int(dd[numAudioData*numFreq]), numLabel))	
-
-		with tf.device('/gpu:3'):	
-			aud_inputX = tf.placeholder(tf.float32, [None, numAudioData*numFreq])
-			aud_outputY = tf.placeholder(tf.float32, [None, numLabel])
-
-			W_conv21 = weight_variable([1, 3, 1, 4])
-			#bias = 출력 갯수= kernel 수= filter 수
-			b_conv21 = bias_variable([4])
-			x_image = tf.reshape(aud_inputX, [-1, numFreq, numAudioData, 1])
-			h_conv21 = tf.nn.relu(conv2d(x_image, W_conv21) + b_conv21)
-			h_pool21 = max_pool_1x2(h_conv21)
-		
-			W_conv22 = weight_variable([1, 3, 4, 8])
-			b_conv22 = bias_variable([8])
-			h_conv22 = tf.nn.relu(conv2d(h_pool21, W_conv22) + b_conv22)
-			h_pool22 = max_pool_1x2(h_conv22)
-
-			W_conv23 = weight_variable([1, 3, 8, 16])
-			b_conv23 = bias_variable([16])
-			h_conv23 = tf.nn.relu(conv2d(h_pool22, W_conv23) + b_conv23)
-			h_pool23 = max_pool_1x2(h_conv23)
-
-			W_conv24 = weight_variable([1, 3, 16, 32])
-			b_conv24 = bias_variable([32])
-			h_conv24 = tf.nn.relu(conv2d(h_pool23, W_conv24) + b_conv24)
-			h_pool24 = max_pool_1x2(h_conv24)
-
-			W_conv25 = weight_variable([1, 3, 32, 64])
-			b_conv25 = bias_variable([64])
-			h_conv25 = tf.nn.relu(conv2d(h_pool24, W_conv25) + b_conv25)
-			h_pool25 = max_pool_1x2(h_conv25)
-			
-			W_conv26 = weight_variable([1, 3, 64, 128])
-			b_conv26 = bias_variable([128])
-			h_conv26 = tf.nn.relu(conv2d(h_pool25, W_conv26) + b_conv26)
-			h_pool26 = max_pool_2x2(h_conv26)
-		
-			W_conv27 = weight_variable([1, 3, 128, 256])
-			b_conv27 = bias_variable([256])
-			h_conv27 = tf.nn.relu(conv2d(h_pool26, W_conv27) + b_conv27)
-			h_pool27 = max_pool_2x2(h_conv27)
-
-			W_conv28 = weight_variable([1, 3, 256, 512])
-			b_conv28 = bias_variable([512])
-			h_conv28 = tf.nn.relu(conv2d(h_pool27, W_conv28) + b_conv28)
-			h_pool28 = max_pool_2x2(h_conv28)
-
-			h_pool_aver = aver_pool(h_pool28)
-			h_pool22_flat = tf.reshape(h_pool_aver, [-1, 1* 1 * 512])
-
-			W_fc23 = weight_variable([512, numLabel])
-			b_fc23 = bias_variable([numLabel])
-			y_conv2=tf.nn.softmax(tf.matmul(h_pool22_flat, W_fc23) + b_fc23)	
-
-			cross_entropy2 = -tf.reduce_sum(aud_outputY * tf.log(tf.clip_by_value(y_conv2, 1e-10, 1.0)))
-			train_step2 = tf.train.AdamOptimizer(1e-4).minimize(cross_entropy2)
-			correct_prediction2 = tf.equal(tf.argmax(y_conv2, 1), tf.argmax(aud_outputY, 1))
-			accuracy2 = tf.reduce_mean(tf.cast(correct_prediction2, tf.float32))
-
-		audSess = tf.InteractiveSession()
-		audSess.run(tf.global_variables_initializer())
-		
-		aud_xTrain = array(aud_xTrain).reshape(len(aud_xTrain), numAudioData*numFreq)
-		aud_yTrain = array(aud_yTrain).reshape(len(aud_yTrain), numLabel)
-
 		for j in range(301):
-			batch_audX, batch_audY = bf.getBatchData(BATCHSIZE, aud_xTrain, aud_yTrain)
-			train_step2.run(session=audSess, feed_dict={aud_inputX: batch_audX, aud_outputY: batch_audY, keep_prob:0.5})
+			batch_X, batch_Y = bf.getBatchData(BATCHSIZE, acc_xTrain, acc_yTrain)
+			train_step1.run(session=sess, feed_dict={acc_inputX: batch_X, acc_outputY: batch_Y, keep_prob:0.5})
+			batch_XA, batch_YA = bf.getBatchData(BATCHSIZE, aud_xTrain, aud_yTrain)
+			train_step2.run(session=sess, feed_dict={aud_inputX: batch_XA, aud_outputY: batch_YA, keep_prob:0.5})
 			if j % BATCHSIZE == 0:
-				train_audAccuracy = accuracy2.eval(session=audSess, feed_dict={aud_inputX: batch_audX, aud_outputY: batch_audY, keep_prob:1.0})
-				print("Audio accuracy ", train_audAccuracy)
+				train_accuracy = accuracy1.eval(session=sess, feed_dict={acc_inputX: batch_X, acc_outputY: batch_Y, keep_prob:1.0})
+				bf.mLog("step %d, accuracy %g" % (j, train_accuracy), logPath)
+				train_accuracy2 = accuracy2.eval(session=sess, feed_dict={aud_inputX: batch_XA, aud_outputY: batch_YA, keep_prob:1.0})
+				print('Audio accuracy : ', train_accuracy2)
+		bf.mLog("training Finish", logPath)
 
-		audSess.close()
+		dTest = bf.onlySampleSize(dataTest, 1)
+
+		acc_xTest = []
+		acc_yTest = []
+		for d in dTest:
+			acc_xTest.append(d[0:300])
+			acc_yTest.append(bf.oneHotLabel(int(d[-1]), numLabel))
+
+		acc_xTest = array(acc_xTest).reshape(len(acc_xTest), 300)
+		bf.mLog("test Start", logPath)
+		yPreTmp = tf.argmax(y_conv1, 1)
+		val_acc, yPred = sess.run([accuracy1, yPreTmp], feed_dict={acc_inputX: acc_xTest, acc_outputY: acc_yTest, keep_prob: 1.0})
+		yTrue = np.argmax(acc_yTest, 1)
+		bf.mLog("test finish", logPath)
+
+		result_accuracy[count] = accuracy_score(yTrue, yPred)
+		result_precision[count] = precision_score(yTrue, yPred, average = 'macro')
+		result_recall[count] = recall_score(yTrue, yPred, average = 'macro')
+		result_f1Score[count] = f1_score(yTrue, yPred, average = 'macro')
+		result_confusion = str(confusion_matrix(yTrue, yPred))
+		bf.mLog("%d-fold %dth" % (KFOLD, count+1), logPath)
+		bf.mLog("accuracy : " + str(result_accuracy[count]), logPath)
+		bf.mLog("precision : " + str(result_precision[count]), logPath)
+		bf.mLog("recall : " + str(result_recall[count]), logPath)
+		bf.mLog("f1 Score : " +str(result_f1Score[count]), logPath)
+		bf.mLog("confution matrix" + result_confusion, logPath)
+		count = count + 1
+
+		sess.close()
 
 	modelAccuracy = 0
 	modelPrecision = 0
