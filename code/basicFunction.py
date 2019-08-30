@@ -65,8 +65,8 @@ def onlyFileRead(filePath, fileName, label):
     reData.append(rawDataX)
     reData.append(rawDataY)
     reData.append(rawDataZ)
-    reData.append(audioData)
     reData.append(label)
+    reData.append(audioData)
 
     return reData
 
@@ -127,32 +127,26 @@ def audioSampleSize(rawData, sampleSize):
 
     reData = []
     for rDataset in rawData:
-        rawDataX = rDataset[0]
-        label = rDataset[1]
-        if sampleSize != 1:
-            deltaT = (100-len(rawDataX))/(sampleSize-1)
-        else :
-            deltaT = 100-len(rawDataX)
-
-        deltaT = int(deltaT)
+        rawData = rDataset[4]
+        label = rDataset[3]
         deltaT = 3414
 
         for i in range(sampleSize):
-            dataX = []
-            tmpX = []
+            data = []
+            tmp = []
 
             for frontIndex in range(i):
                 for index in range(deltaT):
-                    tmpX.append(rawDataX[0])
-            dataX = tmpX + rawDataX
-            tmpX = []
-            for rearIndex in range(sampleSize-i-1):
-                for index in range(deltaT):
-                    tmpX.append(rawDataX[len(rawDataX) - 1])
-            dataX = dataX + tmpX
-            for otherIndex in range(deltaT):
-                dataX.append(rawDataX[len(rawDataX)-1])
-            tmp = dataX 
+                    tmp.append(rawData[0])
+            data = tmp + rawData
+            #tmp = []
+            #for rearIndex in range(sampleSize-i-1):
+            #    for index in range(deltaT):
+            #        tmp.append(rawData[len(rawData) - 1])
+            #data = data + tmp
+            #for otherIndex in range(deltaT):
+            #    data.append(rawData[len(rawData)-1])
+            tmp = data 
             tmp.append(label)
             reData.append(tmp)
 

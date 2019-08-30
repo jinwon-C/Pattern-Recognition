@@ -49,7 +49,6 @@ if __name__ == "__main__":
 	logPath = logDir + logFile
 	BATCHSIZE = 50
 	filePath = '../data/20190816/Dual/win15000/'
-	#filePath = '../data/20190816/Acceloremeter/'
 	patternName = ['1','2','3','4','5','6','7','8','9','a']
 
 	numLabel = len(patternName)
@@ -66,10 +65,7 @@ if __name__ == "__main__":
 				label = patternName[patternIndex]
 			tmp = bf.onlyFileRead(filePath, fileName, label)
 			data.append(tmp)
-			audioTmp = bf.audioFileRead(filePath, fileName, label)
-			audioData.append(audioTmp)
 	np.random.shuffle(data)
-	np.random.shuffle(audioData)
 
 	result_accuracy = np.zeros(shape=(KFOLD))
 	result_precision = np.zeros(shape=(KFOLD))
@@ -77,11 +73,15 @@ if __name__ == "__main__":
 	result_f1Score = np.zeros(shape=(KFOLD))
 	count = 0
 
+	#print('data : ', np.shape(data))
+	#print('data : ', data[100])
+
 	kf = KFold(n_splits = KFOLD)
 	kf.get_n_splits(data)
 	data = np.array(data)
 	kf.get_n_splits(audioData)
 	audioData = np.array(audioData)
+
 	for train_index, test_index in kf.split(data):
 		dataTrain, dataTest = data[train_index], data[test_index]
 
@@ -89,9 +89,13 @@ if __name__ == "__main__":
 
 		acc_xTrain = []
 		acc_yTrain = []
+		aud_xTrain = []
+		aud_yTrain = []
 		for d in dTrain:
 			acc_xTrain.append(d[0:300])
 			acc_yTrain.append(bf.oneHotLabel(int(d[300]), numLabel))
+			#aud_xTrain.append(d[0:numAudioData*numFreq])
+			#aud_yTrain.append(bf.oneHotLabel(int(d[-1]), numLabel))
 
 	#       on Imac the GPU is not working. so
 		with tf.device('/gpu:3'):
@@ -165,32 +169,81 @@ if __name__ == "__main__":
 			correct_prediction1 = tf.equal(tf.argmax(y_conv1, 1), tf.argmax(acc_outputY, 1))
 			accuracy1 = tf.reduce_mean(tf.cast(correct_prediction1, tf.float32))
 
+
+		#Audio model
+			aud_inputX = tf.placeholder(tf.float32, [None, numAudioData*numFreq])
+			aud_outputY = tf.placeholder(tf.float32, [None, numLabel])
+
+			W_conv21 = weight_variable([1, 3, 1, 4])
+			#bias = 출력 갯수= kernel 수= filter 수
+			b_conv21 = bias_variable([4])
+			x_image = tf.reshape(aud_inputX, [-1, numFreq, numAudioData, 1])
+			h_conv21 = tf.nn.relu(conv2d(x_image, W_conv21) + b_conv21)
+			h_pool21 = max_pool_1x2(h_conv21)
+		
+			W_conv22 = weight_variable([1, 3, 4, 8])
+			b_conv22 = bias_variable([8])
+			h_conv22 = tf.nn.relu(conv2d(h_pool21, W_conv22) + b_conv22)
+			h_pool22 = max_pool_1x2(h_conv22)
+
+			W_conv23 = weight_variable([1, 3, 8, 16])
+			b_conv23 = bias_variable([16])
+			h_conv23 = tf.nn.relu(conv2d(h_pool22, W_conv23) + b_conv23)
+			h_pool23 = max_pool_1x2(h_conv23)
+
+			W_conv24 = weight_variable([1, 3, 16, 32])
+			b_conv24 = bias_variable([32])
+			h_conv24 = tf.nn.relu(conv2d(h_pool23, W_conv24) + b_conv24)
+			h_pool24 = max_pool_1x2(h_conv24)
+
+			W_conv25 = weight_variable([1, 3, 32, 64])
+			b_conv25 = bias_variable([64])
+			h_conv25 = tf.nn.relu(conv2d(h_pool24, W_conv25) + b_conv25)
+			h_pool25 = max_pool_1x2(h_conv25)
+			
+			W_conv26 = weight_variable([1, 3, 64, 128])
+			b_conv26 = bias_variable([128])
+			h_conv26 = tf.nn.relu(conv2d(h_pool25, W_conv26) + b_conv26)
+			h_pool26 = max_pool_2x2(h_conv26)
+		
+			W_conv27 = weight_variable([1, 3, 128, 256])
+			b_conv27 = bias_variable([256])
+			h_conv27 = tf.nn.relu(conv2d(h_pool26, W_conv27) + b_conv27)
+			h_pool27 = max_pool_2x2(h_conv27)
+
+			W_conv28 = weight_variable([1, 3, 256, 512])
+			b_conv28 = bias_variable([512])
+			h_conv28 = tf.nn.relu(conv2d(h_pool27, W_conv28) + b_conv28)
+			h_pool28 = max_pool_2x2(h_conv28)
+
+			h_pool_aver = aver_pool(h_pool28)
+			h_pool22_flat = tf.reshape(h_pool_aver, [-1, 1* 1 * 512])
+
+			W_fc23 = weight_variable([512, numLabel])
+			b_fc23 = bias_variable([numLabel])
+			y_conv2=tf.nn.softmax(tf.matmul(h_pool22_flat, W_fc23) + b_fc23)	
+
+			cross_entropy2 = -tf.reduce_sum(aud_outputY * tf.log(tf.clip_by_value(y_conv2, 1e-10, 1.0)))
+			train_step2 = tf.train.AdamOptimizer(1e-4).minimize(cross_entropy2)
+			correct_prediction2 = tf.equal(tf.argmax(y_conv2, 1), tf.argmax(aud_outputY, 1))
+			accuracy2 = tf.reduce_mean(tf.cast(correct_prediction2, tf.float32))
+
+
 		#saver = tf.train.Saver()
 		sess = tf.InteractiveSession()
-
 		sess.run(tf.global_variables_initializer())
-		#print('acc : ', acc_xTrain.shape)
 		acc_xTrain = array(acc_xTrain).reshape(len(acc_xTrain), 300)
-		print('acc X : ', acc_xTrain.shape)
 		acc_yTrain = array(acc_yTrain).reshape(len(acc_yTrain), 10)
-		print('acc Y : ', acc_yTrain.shape)
 
 		bf.mLog("training Start", logPath)
 
-	for j in range(301):
+	for j in range(51):
 		batch_X, batch_Y = bf.getBatchData(BATCHSIZE, acc_xTrain, acc_yTrain)
 		train_step1.run(session=sess, feed_dict={acc_inputX: batch_X, acc_outputY: batch_Y, keep_prob:0.5})
-		#batch_audX, batch_audY = bf.getBatchData(BATCHSIZE, aud_xTrain, aud_yTrain)
-		#train_step.run(feed_dict={aud_inputX: batch_audX, aud_outputY: batch_audY, keep_prob:0.5})
 		if j % BATCHSIZE == 0:
 			train_accuracy = accuracy1.eval(session=sess, feed_dict={acc_inputX: batch_X, acc_outputY: batch_Y, keep_prob:1.0})
 			bf.mLog("step %d, accuracy %g" % (j, train_accuracy), logPath)
 	bf.mLog("training Finish", logPath)
-
-			#train_audAccuracy = accuracy.eval(feed_dict={aud_inputX: batch_audX, aud_outputY: batch_audY, keep_prob:1.0})
-			#print("Audio accuracy ", train_audAccuracy)
-			#savePath = saver.save(sess, "./model/model_" + str(KFOLD) +  ".ckpt")
-			#bf.mLog("save path"+savePath, logPath)
 
 	dTest = bf.onlySampleSize(dataTest, 1)
 
@@ -222,16 +275,18 @@ if __name__ == "__main__":
 
 	sess.close()
 
-	for train_audIndex, test_audIndex in kf.split(audioData):
-		audDataTrain, audDataTest = audioData[train_audIndex], audioData[test_audIndex]
+	for train_audIndex, test_audIndex in kf.split(data):
+		audDataTrain, audDataTest = data[train_audIndex], data[test_audIndex]
 
 		ddTrain = bf.audioSampleSize(audDataTrain, 1)
 		aud_xTrain = []
 		aud_yTrain = []
 		for dd in ddTrain:
-			aud_xTrain.append(dd[0:3414])
-			aud_yTrain.append(bf.oneHotLabel(int(dd[-1]), numLabel))	
-		
+			#print('dd : ', len(dd))
+			#print('dd : ', dd)
+			aud_xTrain.append(dd[0:numAudioData*numFreq])
+			aud_yTrain.append(bf.oneHotLabel(int(dd[numAudioData*numFreq]), numLabel))	
+
 		with tf.device('/gpu:3'):	
 			aud_inputX = tf.placeholder(tf.float32, [None, numAudioData*numFreq])
 			aud_outputY = tf.placeholder(tf.float32, [None, numLabel])
@@ -294,9 +349,7 @@ if __name__ == "__main__":
 		audSess.run(tf.global_variables_initializer())
 		
 		aud_xTrain = array(aud_xTrain).reshape(len(aud_xTrain), numAudioData*numFreq)
-		print('aud X : ', np.shape(aud_xTrain))
 		aud_yTrain = array(aud_yTrain).reshape(len(aud_yTrain), numLabel)
-		print('aud Y : ', np.shape(aud_yTrain))
 
 		for j in range(301):
 			batch_audX, batch_audY = bf.getBatchData(BATCHSIZE, aud_xTrain, aud_yTrain)
