@@ -137,36 +137,6 @@ def onlySampleSize(rawData, sampleSize):
 
     return reData
 
-
-def audioSampleSize(rawData, sampleSize):
-
-    reData = []
-    for rDataset in rawData:
-        rawData = rDataset[4]
-        label = rDataset[3]
-        deltaT = 3414
-
-        for i in range(sampleSize):
-            data = []
-            tmp = []
-
-            for frontIndex in range(i):
-                for index in range(deltaT):
-                    tmp.append(rawData[0])
-            data = tmp + rawData
-            #tmp = []
-            #for rearIndex in range(sampleSize-i-1):
-            #    for index in range(deltaT):
-            #        tmp.append(rawData[len(rawData) - 1])
-            #data = data + tmp
-            #for otherIndex in range(deltaT):
-            #    data.append(rawData[len(rawData)-1])
-            tmp = data 
-            tmp.append(label)
-            reData.append(tmp)
-
-    return reData
-
 def fileRead(filePath, fileName, label, sampleSize = 11):
 
     dFile = open(filePath+fileName, 'r')
