@@ -4,6 +4,7 @@ sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__)))) #�
 sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(os.path.abspath(os.path.dirname(__file__)))))) # 상위 상위 폴더 import
 import basicFunction as bf
 import numpy as np
+import keras as kr
 import tensorflow as tf
 import time
 from numpy import array
@@ -91,11 +92,15 @@ if __name__ == "__main__":
 		acc_yTrain = []
 		aud_xTrain = []
 		aud_yTrain = []
+		xTrain = []
+		yTrain = []
 		for d in dTrain:
 			acc_xTrain.append(d[0:300])
 			aud_xTrain.append(d[300:300+numAudioData*numFreq])
+			xTrain.append(d[0:300+numAudioData*numFreq])
 			acc_yTrain.append(bf.oneHotLabel(int(d[-1]), numLabel))
 			aud_yTrain.append(bf.oneHotLabel(int(d[-1]), numLabel))
+			yTrain.append(bf.oneHotLabel(int(d[-1]), numLabel))
 		print('acc_xTrain : ', len(acc_xTrain))
 		print('aud_xTrain : ', len(aud_xTrain))
 	#       on Imac the GPU is not working. so
@@ -164,6 +169,9 @@ if __name__ == "__main__":
 			b_fc13 = bias_variable([10])
 			y_conv1 = tf.nn.softmax(tf.matmul(h_fc11_drop2, W_fc13) + b_fc13)
 
+			print('y_conv1 : ', y_conv1)
+			print('y_conv1 : ', y_conv1.shape)
+
 			# Define loss and optimizer
 			cross_entropy1 = -tf.reduce_sum(acc_outputY * tf.log(tf.clip_by_value(y_conv1, 1e-10, 1.0)))
 			train_step1 = tf.train.AdamOptimizer(1e-4).minimize(cross_entropy1)
@@ -222,13 +230,25 @@ if __name__ == "__main__":
 
 			W_fc23 = weight_variable([512, numLabel])
 			b_fc23 = bias_variable([numLabel])
-			y_conv2=tf.nn.softmax(tf.matmul(h_pool22_flat, W_fc23) + b_fc23)	
+			y_conv2 = tf.nn.softmax(tf.matmul(h_pool22_flat, W_fc23) + b_fc23)	
+
+			#y_conv3 = tf.nn.softmax(tf.matmul(y_conv1, tf.transpose(y_conv2)) + b_fc13 + b_fc23)
+			y_conv3 = kr.layers.Add()([y_conv1, y_conv2])
+
+			print('y_conv2 : ', y_conv2)
+			print('y_conv2 : ', y_conv2.shape)
+			print('y_conv3 : ', y_conv3)
+			print('y_conv3 : ', y_conv3.shape)
 
 			cross_entropy2 = -tf.reduce_sum(aud_outputY * tf.log(tf.clip_by_value(y_conv2, 1e-10, 1.0)))
 			train_step2 = tf.train.AdamOptimizer(1e-4).minimize(cross_entropy2)
 			correct_prediction2 = tf.equal(tf.argmax(y_conv2, 1), tf.argmax(aud_outputY, 1))
 			accuracy2 = tf.reduce_mean(tf.cast(correct_prediction2, tf.float32))
 
+			cross_entropy3 = -tf.reduce_sum(aud_outputY * tf.log(tf.clip_by_value(y_conv3, 1e-10, 1.0)))
+			train_step3 = tf.train.AdamOptimizer(1e-4).minimize(cross_entropy3)
+			correct_prediction3 = tf.equal(tf.argmax(y_conv3, 1), tf.argmax(aud_outputY, 1))
+			accuracy3 = tf.reduce_mean(tf.cast(correct_prediction3, tf.float32))
 
 		#saver = tf.train.Saver()
 		sess = tf.InteractiveSession()
@@ -236,37 +256,42 @@ if __name__ == "__main__":
 		acc_xTrain = array(acc_xTrain).reshape(len(acc_xTrain), 300)
 		acc_yTrain = array(acc_yTrain).reshape(len(acc_yTrain), 10)
 
-		print('acc_xTrain : ', (acc_xTrain[0]))
-		print('aud_xTrain : ', (aud_xTrain[0]))
 		aud_xTrain = array(aud_xTrain).reshape(len(aud_xTrain), 3414)
 		aud_yTrain = array(aud_yTrain).reshape(len(aud_yTrain), 10)
 
+		xTrain = array(xTrain).reshape(len(xTrain), 3714)
+		yTrain = array(yTrain).reshape(len(yTrain), 10)
+
 		bf.mLog("training Start", logPath)
 
-		for j in range(301):
-			batch_X, batch_Y = bf.getBatchData(BATCHSIZE, acc_xTrain, acc_yTrain)
-			train_step1.run(session=sess, feed_dict={acc_inputX: batch_X, acc_outputY: batch_Y, keep_prob:0.5})
-			batch_XA, batch_YA = bf.getBatchData(BATCHSIZE, aud_xTrain, aud_yTrain)
-			train_step2.run(session=sess, feed_dict={aud_inputX: batch_XA, aud_outputY: batch_YA, keep_prob:0.5})
+		for j in range(8001):
+			batch_X, batch_Y = bf.getBatchData(BATCHSIZE, xTrain, yTrain)
+			batch_XA = batch_X[:,0:300]
+			batch_XB = batch_X[:,300:3714]
+			train_step3.run(session=sess, feed_dict={acc_inputX: batch_XA, acc_outputY: batch_Y, aud_inputX:batch_XB, aud_outputY:batch_Y, keep_prob:0.5})
+
 			if j % BATCHSIZE == 0:
-				train_accuracy = accuracy1.eval(session=sess, feed_dict={acc_inputX: batch_X, acc_outputY: batch_Y, keep_prob:1.0})
+				train_accuracy = accuracy3.eval(session=sess, feed_dict={acc_inputX: batch_XA, aud_inputX: batch_XB, acc_outputY: batch_Y, aud_outputY: batch_Y, keep_prob:1.0})
 				bf.mLog("step %d, accuracy %g" % (j, train_accuracy), logPath)
-				train_accuracy2 = accuracy2.eval(session=sess, feed_dict={aud_inputX: batch_XA, aud_outputY: batch_YA, keep_prob:1.0})
-				print('Audio accuracy : ', train_accuracy2)
 		bf.mLog("training Finish", logPath)
 
 		dTest = bf.onlySampleSize(dataTest, 1)
 
 		acc_xTest = []
 		acc_yTest = []
+		aud_xTest = []
+		aud_yTest = []
 		for d in dTest:
 			acc_xTest.append(d[0:300])
+			aud_xTest.append(d[300:3714])
 			acc_yTest.append(bf.oneHotLabel(int(d[-1]), numLabel))
+			aud_yTest.append(bf.oneHotLabel(int(d[-1]), numLabel))
 
 		acc_xTest = array(acc_xTest).reshape(len(acc_xTest), 300)
+		aud_xTest = array(aud_xTest).reshape(len(aud_xTest), 3414)
 		bf.mLog("test Start", logPath)
-		yPreTmp = tf.argmax(y_conv1, 1)
-		val_acc, yPred = sess.run([accuracy1, yPreTmp], feed_dict={acc_inputX: acc_xTest, acc_outputY: acc_yTest, keep_prob: 1.0})
+		yPreTmp = tf.argmax(y_conv3, 1)
+		val_acc, yPred = sess.run([accuracy3, yPreTmp], feed_dict={acc_inputX: acc_xTest, acc_outputY: acc_yTest, aud_inputX: aud_xTest, aud_outputY: aud_yTest, keep_prob: 1.0})
 		yTrue = np.argmax(acc_yTest, 1)
 		bf.mLog("test finish", logPath)
 
