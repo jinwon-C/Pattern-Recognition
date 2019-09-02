@@ -72,6 +72,12 @@ if __name__ == "__main__":
 	result_precision = np.zeros(shape=(KFOLD))
 	result_recall = np.zeros(shape=(KFOLD))
 	result_f1Score = np.zeros(shape=(KFOLD))
+
+	result_accuracy2 = np.zeros(shape=(KFOLD))
+	result_precision2 = np.zeros(shape=(KFOLD))
+	result_recall2 = np.zeros(shape=(KFOLD))
+	result_f1Score2 = np.zeros(shape=(KFOLD))
+
 	count = 0
 
 	#print('data : ', np.shape(data))
@@ -103,6 +109,7 @@ if __name__ == "__main__":
 			yTrain.append(bf.oneHotLabel(int(d[-1]), numLabel))
 		print('acc_xTrain : ', len(acc_xTrain))
 		print('aud_xTrain : ', len(aud_xTrain))
+
 	#       on Imac the GPU is not working. so
 		with tf.device('/gpu:3'):
 			acc_inputX = tf.placeholder(tf.float32, [None, 300])
@@ -121,7 +128,7 @@ if __name__ == "__main__":
 			h_pool12 = max_pool_2x1(h_conv12)
 			# 1* 75 * 18
 
-			#  h2 = tf.nn.dropout(h1_pool2,0.5)
+			# h2 = tf.nn.dropout(h1_pool2,0.5)
 			W_conv13 = weight_variable([3, 1, 18, 36])
 			b_conv13 = bias_variable([36])
 			h_conv13 = tf.nn.relu(conv2d(h_pool12, W_conv13) + b_conv13)
@@ -140,7 +147,7 @@ if __name__ == "__main__":
 			h_pool15 = max_pool_2x1(h_conv15)
 
 			# 1* 4 * 144
-			#  h5 = tf.nn.dropout(h1_pool5,0.5)
+			# h5 = tf.nn.dropout(h1_pool5,0.5)
 			
 			W_conv16 = weight_variable([3, 1, 144, 288])
 			b_conv16 = bias_variable([288])
@@ -162,7 +169,7 @@ if __name__ == "__main__":
 			h_fc12 = tf.nn.relu(tf.matmul(h_pool13_flat, W_fc12) + b_fc12)
 
 			# drop out 연산의 결과를 담을 변수
-			#  keep_prob = tf.placeholder(tf.float32)
+			# keep_prob = tf.placeholder(tf.float32)
 			h_fc11_drop2 = tf.nn.dropout(h_fc12, keep_prob)
 
 			W_fc13 = weight_variable([144, 10])
@@ -264,15 +271,29 @@ if __name__ == "__main__":
 
 		bf.mLog("training Start", logPath)
 
-		for j in range(8001):
+
+		for j in range(3001):
 			batch_X, batch_Y = bf.getBatchData(BATCHSIZE, xTrain, yTrain)
 			batch_XA = batch_X[:,0:300]
 			batch_XB = batch_X[:,300:3714]
-			train_step3.run(session=sess, feed_dict={acc_inputX: batch_XA, acc_outputY: batch_Y, aud_inputX:batch_XB, aud_outputY:batch_Y, keep_prob:0.5})
+			train_step2.run(session=sess, feed_dict={aud_inputX:batch_XB, aud_outputY:batch_Y, keep_prob:0.5})
+
+			if j % BATCHSIZE == 0:
+				train_accuracy2 = accuracy2.eval(session=sess, feed_dict={aud_inputX: batch_XB, aud_outputY: batch_Y, keep_prob:1.0})	
+				train_accuracy3 = accuracy3.eval(session=sess, feed_dict={acc_inputX: batch_XA, aud_inputX: batch_XB, acc_outputY: batch_Y, aud_outputY: batch_Y, keep_prob:1.0})	
+				bf.mLog("AUD step %d, AUD accuracy %g" % (j, train_accuracy2), logPath)
+				bf.mLog("AUD step %d, All accuracy %g" % (j, train_accuracy3), logPath)
+
+		for j in range(20001):
+			batch_X, batch_Y = bf.getBatchData(BATCHSIZE, xTrain, yTrain)
+			batch_XA = batch_X[:,0:300]
+			batch_XB = batch_X[:,300:3714]
+			train_step1.run(session=sess, feed_dict={acc_inputX: batch_XA, acc_outputY: batch_Y, keep_prob:0.5})
 
 			if j % BATCHSIZE == 0:
 				train_accuracy = accuracy3.eval(session=sess, feed_dict={acc_inputX: batch_XA, aud_inputX: batch_XB, acc_outputY: batch_Y, aud_outputY: batch_Y, keep_prob:1.0})
-				bf.mLog("step %d, accuracy %g" % (j, train_accuracy), logPath)
+				bf.mLog("ACC step %d, accuracy %g" % (j, train_accuracy), logPath)
+
 		bf.mLog("training Finish", logPath)
 
 		dTest = bf.onlySampleSize(dataTest, 1)
@@ -290,6 +311,7 @@ if __name__ == "__main__":
 		acc_xTest = array(acc_xTest).reshape(len(acc_xTest), 300)
 		aud_xTest = array(aud_xTest).reshape(len(aud_xTest), 3414)
 		bf.mLog("test Start", logPath)
+		
 		yPreTmp = tf.argmax(y_conv3, 1)
 		val_acc, yPred = sess.run([accuracy3, yPreTmp], feed_dict={acc_inputX: acc_xTest, acc_outputY: acc_yTest, aud_inputX: aud_xTest, aud_outputY: aud_yTest, keep_prob: 1.0})
 		yTrue = np.argmax(acc_yTest, 1)
@@ -305,7 +327,6 @@ if __name__ == "__main__":
 		bf.mLog("precision : " + str(result_precision[count]), logPath)
 		bf.mLog("recall : " + str(result_recall[count]), logPath)
 		bf.mLog("f1 Score : " +str(result_f1Score[count]), logPath)
-		bf.mLog("confution matrix" + result_confusion, logPath)
 		count = count + 1
 
 		sess.close()
