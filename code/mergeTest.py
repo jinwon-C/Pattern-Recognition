@@ -39,24 +39,26 @@ def aver_pool(x):
 if __name__ == "__main__":
 	cTime = time.localtime()
 	KFOLD = 5
-	numFreq = 6
-	numAudioData = 569
-	windowSize = 15000
-	
 	logDir = "../log/paperModel_CNN_%04d%02d%02d_" % (cTime.tm_year, cTime.tm_mon, cTime.tm_mday) + str(KFOLD) + "fold/"
 	logFile = "%02d:%02d:%02d" % (cTime.tm_hour, cTime.tm_min, cTime.tm_sec) + ".log"
 	if not os.path.isdir(logDir):
 		os.mkdir(logDir)
+
 	logPath = logDir + logFile
 	BATCHSIZE = 50
 	filePath = '../data/20190816/Dual/win15000/'
 	patternName = ['1','2','3','4','5','6','7','8','9','a']
 
+	numFreq = 6
+	numAudioData = 569
+	numTotalAud = numFreq * numAudioData
+	numTotalAcc = 300
+	windowSize = 15000
 	numLabel = len(patternName)
 	bf.allNumber = 0
 
 	data = []
-	audioData = []
+	#audioData = []
 	for fileIndex in range(1,51):
 		for patternIndex in range(10):
 			fileName = patternName[patternIndex]+"/"+patternName[patternIndex]+"_"+str(fileIndex)+".csv"
@@ -86,8 +88,8 @@ if __name__ == "__main__":
 	kf = KFold(n_splits = KFOLD)
 	kf.get_n_splits(data)
 	data = np.array(data)
-	kf.get_n_splits(audioData)
-	audioData = np.array(audioData)
+	#kf.get_n_splits(audioData)
+	#audioData = np.array(audioData)
 
 	for train_index, test_index in kf.split(data):
 		dataTrain, dataTest = data[train_index], data[test_index]
@@ -101,9 +103,9 @@ if __name__ == "__main__":
 		xTrain = []
 		yTrain = []
 		for d in dTrain:
-			acc_xTrain.append(d[0:300])
-			aud_xTrain.append(d[300:300+numAudioData*numFreq])
-			xTrain.append(d[0:300+numAudioData*numFreq])
+			acc_xTrain.append(d[0 : numTotalAcc])
+			aud_xTrain.append(d[numTotalAcc : numTotalAcc + numTotalAud])
+			xTrain.append(d[0 : numTotalAcc + numTotalAud])
 			acc_yTrain.append(bf.oneHotLabel(int(d[-1]), numLabel))
 			aud_yTrain.append(bf.oneHotLabel(int(d[-1]), numLabel))
 			yTrain.append(bf.oneHotLabel(int(d[-1]), numLabel))
@@ -112,8 +114,8 @@ if __name__ == "__main__":
 
 	#       on Imac the GPU is not working. so
 		with tf.device('/gpu:3'):
-			acc_inputX = tf.placeholder(tf.float32, [None, 300])
-			acc_outputY = tf.placeholder(tf.float32, [None, 10])
+			acc_inputX = tf.placeholder(tf.float32, [None, numTotalAcc])
+			acc_outputY = tf.placeholder(tf.float32, [None, numLabel])
 
 			#1 * 100 * 3
 			W_conv11 = weight_variable([3, 1, 1, 9]) #width, height, channel input, channel output
@@ -172,14 +174,15 @@ if __name__ == "__main__":
 			# keep_prob = tf.placeholder(tf.float32)
 			h_fc11_drop2 = tf.nn.dropout(h_fc12, keep_prob)
 
-			W_fc13 = weight_variable([144, 10])
-			b_fc13 = bias_variable([10])
+			W_fc13 = weight_variable([144, numLabel])
+			b_fc13 = bias_variable([numLabel])
 			y_conv1 = tf.nn.softmax(tf.matmul(h_fc11_drop2, W_fc13) + b_fc13)
 
 			print('y_conv1 : ', y_conv1)
 			print('y_conv1 : ', y_conv1.shape)
-
+			print('y_conv1 : ', y_conv1[1])
 			# Define loss and optimizer
+
 			cross_entropy1 = -tf.reduce_sum(acc_outputY * tf.log(tf.clip_by_value(y_conv1, 1e-10, 1.0)))
 			train_step1 = tf.train.AdamOptimizer(1e-4).minimize(cross_entropy1)
 			correct_prediction1 = tf.equal(tf.argmax(y_conv1, 1), tf.argmax(acc_outputY, 1))
@@ -187,7 +190,7 @@ if __name__ == "__main__":
 
 
 		#Audio model
-			aud_inputX = tf.placeholder(tf.float32, [None, numAudioData*numFreq])
+			aud_inputX = tf.placeholder(tf.float32, [None, numTotalAud])
 			aud_outputY = tf.placeholder(tf.float32, [None, numLabel])
 
 			W_conv21 = weight_variable([1, 3, 1, 4])
@@ -239,10 +242,10 @@ if __name__ == "__main__":
 			b_fc23 = bias_variable([numLabel])
 			y_conv2 = tf.nn.softmax(tf.matmul(h_pool22_flat, W_fc23) + b_fc23)	
 
-			#y_conv3 = tf.nn.softmax(tf.matmul(y_conv1, tf.transpose(y_conv2)) + b_fc13 + b_fc23)
-			y_conv3 = kr.layers.Add()([y_conv1, y_conv2])
+			#y_conv3 = kr.layers.Add()([y_conv1, y_conv2])
+			y_conv3 = tf.maximum(y_conv1, y_conv2)
 
-			print('y_conv2 : ', y_conv2)
+			print('y_conv2 : ', y_conv2[1])
 			print('y_conv2 : ', y_conv2.shape)
 			print('y_conv3 : ', y_conv3)
 			print('y_conv3 : ', y_conv3.shape)
@@ -260,38 +263,42 @@ if __name__ == "__main__":
 		#saver = tf.train.Saver()
 		sess = tf.InteractiveSession()
 		sess.run(tf.global_variables_initializer())
-		acc_xTrain = array(acc_xTrain).reshape(len(acc_xTrain), 300)
-		acc_yTrain = array(acc_yTrain).reshape(len(acc_yTrain), 10)
+		acc_xTrain = array(acc_xTrain).reshape(len(acc_xTrain), numTotalAcc)
+		acc_yTrain = array(acc_yTrain).reshape(len(acc_yTrain), numLabel)
 
-		aud_xTrain = array(aud_xTrain).reshape(len(aud_xTrain), 3414)
-		aud_yTrain = array(aud_yTrain).reshape(len(aud_yTrain), 10)
+		aud_xTrain = array(aud_xTrain).reshape(len(aud_xTrain), numTotalAud)
+		aud_yTrain = array(aud_yTrain).reshape(len(aud_yTrain), numLabel)
 
-		xTrain = array(xTrain).reshape(len(xTrain), 3714)
-		yTrain = array(yTrain).reshape(len(yTrain), 10)
+		xTrain = array(xTrain).reshape(len(xTrain), numTotalAcc + numTotalAud)
+		yTrain = array(yTrain).reshape(len(yTrain), numLabel)
 
 		bf.mLog("training Start", logPath)
 
 
 		for j in range(3001):
 			batch_X, batch_Y = bf.getBatchData(BATCHSIZE, xTrain, yTrain)
-			batch_XA = batch_X[:,0:300]
-			batch_XB = batch_X[:,300:3714]
+			#batch_XA = batch_X[:,0:300]
+			batch_XB = batch_X[:,numTotalAcc : numTotalAcc + numTotalAud]
 			train_step2.run(session=sess, feed_dict={aud_inputX:batch_XB, aud_outputY:batch_Y, keep_prob:0.5})
 
 			if j % BATCHSIZE == 0:
 				train_accuracy2 = accuracy2.eval(session=sess, feed_dict={aud_inputX: batch_XB, aud_outputY: batch_Y, keep_prob:1.0})	
-				train_accuracy3 = accuracy3.eval(session=sess, feed_dict={acc_inputX: batch_XA, aud_inputX: batch_XB, acc_outputY: batch_Y, aud_outputY: batch_Y, keep_prob:1.0})	
 				bf.mLog("AUD step %d, AUD accuracy %g" % (j, train_accuracy2), logPath)
-				bf.mLog("AUD step %d, All accuracy %g" % (j, train_accuracy3), logPath)
-
+				#bf.mLog("AUD step %d, All accuracy %g" % (j, train_accuracy3), logPath)
+				#h1 = sess.run(y_conv1, feed_dict={acc_inputX: batch_XA, acc_outputY: batch_Y, aud_inputX: batch_XB, aud_outputY: batch_Y, keep_prob:1.0}) 
+				#h2 = sess.run(y_conv2, feed_dict={acc_inputX: batch_XA, acc_outputY: batch_Y, aud_inputX: batch_XB, aud_outputY: batch_Y, keep_prob:1.0}) 
+				#h3 = sess.run(y_conv3, feed_dict={acc_inputX: batch_XA, acc_outputY: batch_Y, aud_inputX: batch_XB, aud_outputY: batch_Y, keep_prob:1.0}) 
+				#print('h1 : ',h1)
+				#print('h2 : ',h2)
+				#print('h3 : ',h3)
 		for j in range(20001):
 			batch_X, batch_Y = bf.getBatchData(BATCHSIZE, xTrain, yTrain)
-			batch_XA = batch_X[:,0:300]
-			batch_XB = batch_X[:,300:3714]
+			batch_XA = batch_X[:,0:numTotalAcc]
+			#batch_XB = batch_X[:,300:3714]
 			train_step1.run(session=sess, feed_dict={acc_inputX: batch_XA, acc_outputY: batch_Y, keep_prob:0.5})
 
 			if j % BATCHSIZE == 0:
-				train_accuracy = accuracy3.eval(session=sess, feed_dict={acc_inputX: batch_XA, aud_inputX: batch_XB, acc_outputY: batch_Y, aud_outputY: batch_Y, keep_prob:1.0})
+				train_accuracy = accuracy1.eval(session=sess, feed_dict={acc_inputX: batch_XA, acc_outputY: batch_Y, keep_prob:1.0})
 				bf.mLog("ACC step %d, accuracy %g" % (j, train_accuracy), logPath)
 
 		bf.mLog("training Finish", logPath)
@@ -303,13 +310,13 @@ if __name__ == "__main__":
 		aud_xTest = []
 		aud_yTest = []
 		for d in dTest:
-			acc_xTest.append(d[0:300])
-			aud_xTest.append(d[300:3714])
+			acc_xTest.append(d[0 : numTotalAcc])
+			aud_xTest.append(d[numTotalAcc : numTotalAcc + numTotalAud])
 			acc_yTest.append(bf.oneHotLabel(int(d[-1]), numLabel))
 			aud_yTest.append(bf.oneHotLabel(int(d[-1]), numLabel))
 
-		acc_xTest = array(acc_xTest).reshape(len(acc_xTest), 300)
-		aud_xTest = array(aud_xTest).reshape(len(aud_xTest), 3414)
+		acc_xTest = array(acc_xTest).reshape(len(acc_xTest), numTotalAcc)
+		aud_xTest = array(aud_xTest).reshape(len(aud_xTest), numTotalAud)
 		bf.mLog("test Start", logPath)
 		
 		yPreTmp = tf.argmax(y_conv3, 1)
