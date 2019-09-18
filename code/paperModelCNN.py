@@ -201,7 +201,7 @@ if __name__ == "__main__":
         bf.mLog("precision : " + str(result_precision[count]), logPath)
         bf.mLog("recall : " + str(result_recall[count]), logPath)
         bf.mLog("f1 Score : " +str(result_f1Score[count]), logPath)
-        bf.mLog("confution matrix" + result_confusion, logPath)
+        bf.mLog("confusion matrix\n" + result_confusion, logPath)
         count = count + 1
 
         sess.close()
