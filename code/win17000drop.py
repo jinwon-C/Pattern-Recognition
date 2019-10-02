@@ -155,6 +155,7 @@ if __name__ == "__main__":
 			h_pool15 = max_pool_2x1(h_conv15)
 
 			# 1* 4 * 144
+			# drop out 연산의 결과를 담을 변수
 			keep_prob = tf.placeholder(tf.float32)
 			h5 = tf.nn.dropout(h_pool15, keep_prob)
 			
@@ -171,7 +172,6 @@ if __name__ == "__main__":
 
 			y_drop1 = tf.nn.dropout(h_fc11, keep_prob)
 
-			#keep_prob = tf.placeholder(tf.float32)
 			h_fc11_drop1 = tf.nn.dropout(h_fc11, keep_prob)
 
 			W_fc12 = weight_variable([576, 144])
@@ -179,7 +179,6 @@ if __name__ == "__main__":
 			h_pool13_flat = tf.reshape(h_fc11_drop1, [-1, 576])
 			h_fc12 = tf.nn.relu(tf.matmul(h_pool13_flat, W_fc12) + b_fc12)
 
-			# drop out 연산의 결과를 담을 변수
 			h_fc11_drop2 = tf.nn.dropout(h_fc12, keep_prob)
 
 			W_fc13 = weight_variable([144, numLabel])
@@ -250,34 +249,23 @@ if __name__ == "__main__":
 			h_pool29 = max_pool_2x2(h_conv29)
 
 			h_pool22_flat = tf.reshape(h_pool29, [-1, 1* 1 * 1024])
-			#h_drop2 = tf.nn.dropout(h_pool22_flat, keep_prob)
 
 			W_fc23 = weight_variable([1024, numLabel])
 			b_fc23 = bias_variable([numLabel])
-			#y_conv2 = tf.nn.softmax(tf.matmul(h_pool22_flat, W_fc23) + b_fc23)	#original
-			y_conv2 = tf.nn.relu(tf.matmul(h_pool22_flat, W_fc23) + b_fc23)	#modified(to dropout)
+			y_conv2 = tf.nn.softmax(tf.matmul(h_pool22_flat, W_fc23) + b_fc23)
 			y_drop2 = tf.nn.dropout(h_pool22_flat, keep_prob)
 
 			#y_conv3 = kr.layers.Add()([y_conv1, y_conv2])
 			#y_conv3 = tf.maximum(y_conv1, y_conv2)
 			y_conv3 = kr.layers.Concatenate()([h_fc11, h_pool22_flat])
-			#W_conv4 = weight_variable([2752, 10])	
-			#b_conv4 = bias_variable([10])
-			#y_conv4 = tf.nn.relu(conv2d(y_conv3, W_conv4)) + b_conv4)
-			#y_conv4 = tf.nn.softmax(tf.matmul(y_conv3, W_conv4) + b_conv4)
 
-			print('y_drop1 : ', y_drop1.shape)
-			print('y_drop2 : ', y_drop2.shape)
-			print('y_conv3 : ', y_conv3.shape)
 			W_fc31 = weight_variable([1600, 296])
 			b_fc31 = bias_variable([296])
 			h_fc31 = tf.nn.relu(tf.matmul(y_conv3, W_fc31) + b_fc31)
-			#h_fc31_drop = tf.nn.dropout(h_fc31, keep_prob)
 			
 			W_fc32 = weight_variable([296, 54])
 			b_fc32 = bias_variable([54])
 			h_fc32 = tf.nn.relu(tf.matmul(h_fc31, W_fc32) + b_fc32)
-			#h_fc32_drop = tf.nn.dropout(h_fc32, keep_prob)
 
 			W_fc33 = weight_variable([54, 10])
 			b_fc33 = bias_variable([10])
@@ -334,9 +322,6 @@ if __name__ == "__main__":
 				#h1 = sess.run(y_conv1, feed_dict={acc_inputX: batch_XA, acc_outputY: batch_Y, aud_inputX: batch_XB, aud_outputY: batch_Y, keep_prob:1.0}) 
 				#h2 = sess.run(y_conv2, feed_dict={acc_inputX: batch_XA, acc_outputY: batch_Y, aud_inputX: batch_XB, aud_outputY: batch_Y, keep_prob:1.0}) 
 				#h3 = sess.run(y_conv3, feed_dict={acc_inputX: batch_XA, acc_outputY: batch_Y, aud_inputX: batch_XB, aud_outputY: batch_Y, keep_prob:1.0}) 
-				#print('h1 : ',h1)
-				#print('h2 : ',h2)
-				#print('h3 : ',h3)
 		bf.mLog("training Finish", logPath)
 
 		bf.mLog("test Start", logPath)
