@@ -144,10 +144,10 @@ for j in range(0, KFOLD):
 
 	print("N-Fold Data :",j)
 	result_dir = '/home/cjw/result/win'+str(window_size)
-	if not os.path.isdir(result_dir):
-		os.mkdir(result_dir)
-	f_val_result = open(result_dir+'/val_result3_'+str(date)+'_'+str(j)+'.txt','w')
-	f_pre_result = open(result_dir+'/pre_result3_'+str(date)+'_'+str(j)+'.txt','w')
+#	if not os.path.isdir(result_dir):
+#		os.mkdir(result_dir)
+#	f_val_result = open(result_dir+'/val_result3_'+str(date)+'_'+str(j)+'.txt','w')
+#	f_pre_result = open(result_dir+'/pre_result3_'+str(date)+'_'+str(j)+'.txt','w')
 	
 	xTest = np.asarray(xTest)
 	xTest = xTest.reshape(160,num_data, freq_slice)
@@ -156,14 +156,14 @@ for j in range(0, KFOLD):
 
 	print("test accuracy %g"%accuracy.eval(feed_dict={x:xTest, y_: yTest, keep_prob: 1.0}))
 
-	ckpt_path = saver.save(sess, "20190527_stft_2/train", j)
+#	ckpt_path = saver.save(sess, "20190527_stft_2/train", j)
 	print("save ckpt file : ", ckpt_path)
 
 	y = sess.run(y_conv, feed_dict={x:xTest,keep_prob:1.0})
-	for k in range(160):
-		f_val_result.write(str(np.argmax(yTest[k])))
-		f_val_result.write('\n')
-		f_pre_result.write(str(np.argmax(y[k])))
-		f_pre_result.write('\n')
+#	for k in range(160):
+#		f_val_result.write(str(np.argmax(yTest[k])))
+#		f_val_result.write('\n')
+#		f_pre_result.write(str(np.argmax(y[k])))
+#		f_pre_result.write('\n')
 
 sess.close()

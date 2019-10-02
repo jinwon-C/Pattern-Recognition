@@ -42,17 +42,18 @@ def aver_pool(x):
 if __name__ == "__main__":
 	cTime = time.localtime()
 	KFOLD = 5
-	logDir = "../log/paperModel_CNN_%04d%02d%02d_" % (cTime.tm_year, cTime.tm_mon, cTime.tm_mday) + str(KFOLD) + "fold/"
+	file_name = __file__
+	logDir = "../log/"+file_name+"_%04d%02d%02d_" % (cTime.tm_year, cTime.tm_mon, cTime.tm_mday) + str(KFOLD) + "fold/"
 	logFile = "%02d:%02d:%02d" % (cTime.tm_hour, cTime.tm_min, cTime.tm_sec) + ".log"
 	if not os.path.isdir(logDir):
 		os.mkdir(logDir)
 
 	logPath = logDir + logFile
 	BATCHSIZE = 50
-	filePath = '../data/20190816/Dual/win15000/'
+	filePath = '../data/20190816/Dual/win15000/freq10/'
 	patternName = ['1','2','3','4','5','6','7','8','9','a']
 
-	numFreq = 6
+	numFreq = 10
 	numAudioData = 569
 	numTotalAud = numFreq * numAudioData
 	numTotalAcc = 300
@@ -234,7 +235,7 @@ if __name__ == "__main__":
 			W_conv25 = weight_variable([1, 3, 32, 64])
 			b_conv25 = bias_variable([64])
 			h_conv25 = tf.nn.relu(conv2d(h_pool24, W_conv25) + b_conv25)
-			h_pool25 = max_pool_1x2(h_conv25)
+			h_pool25 = max_pool_2x2(h_conv25)
 			
 			W_conv26 = weight_variable([1, 3, 64, 128])
 			b_conv26 = bias_variable([128])
@@ -314,7 +315,6 @@ if __name__ == "__main__":
 
 		bf.mLog("training Start", logPath)
 		cTime = time.localtime()
-		f = open("%02d%02d-%02d:%02d.txt" % (cTime.tm_mon, cTime.tm_mday, cTime.tm_hour, cTime.tm_min), 'a')
 		for j in range(20001):
 			batch_X, batch_Y = bf.getBatchData(BATCHSIZE, xTrain, yTrain)
 			batch_XA = batch_X[:,0:numTotalAcc]
@@ -327,7 +327,6 @@ if __name__ == "__main__":
 				yPreTmp = tf.argmax(y_conv4, 1)
 				test_accuracy = accuracy3.eval(feed_dict={acc_inputX: acc_xTest, acc_outputY: acc_yTest, aud_inputX: aud_xTest, aud_outputY: aud_yTest, keep_prob: 1.0})
 				bf.mLog("test accuracy %g" % test_accuracy, logPath)
-				f.write(str(test_accuracy)+'\n')
 				#bf.mLog("AUD step %d, All accuracy %g" % (j, train_accuracy3), logPath)
 				#h1 = sess.run(y_conv1, feed_dict={acc_inputX: batch_XA, acc_outputY: batch_Y, aud_inputX: batch_XB, aud_outputY: batch_Y, keep_prob:1.0}) 
 				#h2 = sess.run(y_conv2, feed_dict={acc_inputX: batch_XA, acc_outputY: batch_Y, aud_inputX: batch_XB, aud_outputY: batch_Y, keep_prob:1.0}) 
@@ -335,7 +334,6 @@ if __name__ == "__main__":
 				#print('h1 : ',h1)
 				#print('h2 : ',h2)
 				#print('h3 : ',h3)
-		f.close()
 		bf.mLog("training Finish", logPath)
 
 		bf.mLog("test Start", logPath)

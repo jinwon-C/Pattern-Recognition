@@ -46,10 +46,10 @@ if __name__ == "__main__":
 
 	logPath = logDir + logFile
 	BATCHSIZE = 50
-	filePath = '../data/20190816/Dual/win15000/'
+	filePath = '../data/20190816/Dual/win15000/freq10/'
 	patternName = ['1','2','3','4','5','6','7','8','9','a']
 
-	numFreq = 6
+	numFreq = 10
 	numAudioData = 569
 	numTotalAud = numFreq * numAudioData
 	numTotalAcc = 300

@@ -42,7 +42,8 @@ def aver_pool(x):
 if __name__ == "__main__":
 	cTime = time.localtime()
 	KFOLD = 5
-	logDir = "../log/paperModel_CNN_%04d%02d%02d_" % (cTime.tm_year, cTime.tm_mon, cTime.tm_mday) + str(KFOLD) + "fold/"
+	file_name = __file__
+	logDir = "../log/"+file_name+"_%04d%02d%02d_" % (cTime.tm_year, cTime.tm_mon, cTime.tm_mday) + str(KFOLD) + "fold/"
 	logFile = "%02d:%02d:%02d" % (cTime.tm_hour, cTime.tm_min, cTime.tm_sec) + ".log"
 	if not os.path.isdir(logDir):
 		os.mkdir(logDir)
@@ -59,6 +60,8 @@ if __name__ == "__main__":
 	windowSize = 15000
 	numLabel = len(patternName)
 	bf.allNumber = 0
+
+	bf.mLog("\nSTFT window size : "+str(windowSize)+"\nNumber of Frequency Slice : "+str(numFreq), logPath)
 
 	data = []
 	#audioData = []
