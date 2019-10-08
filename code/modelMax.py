@@ -119,7 +119,7 @@ if __name__ == "__main__":
 		aud_xTest = array(aud_xTest).reshape(len(aud_xTest), numTotalAud)
 
 	#       on Imac the GPU is not working. so
-		with tf.device('/gpu:3'):
+		with tf.device('/gpu:2'):
 			acc_inputX = tf.placeholder(tf.float32, [None, numTotalAcc])
 			acc_outputY = tf.placeholder(tf.float32, [None, numLabel])
 
@@ -278,10 +278,10 @@ if __name__ == "__main__":
 #			b_conv4 = bias_variable([10])
 #			y_conv4 = tf.nn.softmax(tf.matmul(y_conv3, W_conv4) + b_conv4)
 
-			#cross_entropy2 = -tf.reduce_sum(aud_outputY * tf.log(tf.clip_by_value(y_conv2, 1e-10, 1.0)))
-			#train_step2 = tf.train.AdamOptimizer(1e-4).minimize(cross_entropy2)
-			#correct_prediction2 = tf.equal(tf.argmax(y_conv2, 1), tf.argmax(aud_outputY, 1))
-			#accuracy2 = tf.reduce_mean(tf.cast(correct_prediction2, tf.float32))
+			cross_entropy2 = -tf.reduce_sum(aud_outputY * tf.log(tf.clip_by_value(y_conv2, 1e-10, 1.0)))
+			train_step2 = tf.train.AdamOptimizer(1e-4).minimize(cross_entropy2)
+			correct_prediction2 = tf.equal(tf.argmax(y_conv2, 1), tf.argmax(aud_outputY, 1))
+			accuracy2 = tf.reduce_mean(tf.cast(correct_prediction2, tf.float32))
 
 			cross_entropy3 = -tf.reduce_sum(aud_outputY * tf.log(tf.clip_by_value(y_conv4, 1e-10, 1.0)))
 			train_step3 = tf.train.AdamOptimizer(1e-4).minimize(cross_entropy3)
@@ -303,15 +303,32 @@ if __name__ == "__main__":
 		bf.mLog("training Start", logPath)
 		cTime = time.localtime()
 
-		for j in range(30001):
+		for j in range(6001):
 			batch_X, batch_Y = bf.getBatchData(BATCHSIZE, xTrain, yTrain)
 			batch_XA = batch_X[:,0:numTotalAcc]
 			batch_XB = batch_X[:,numTotalAcc : numTotalAcc + numTotalAud]
-			train_step3.run(session=sess, feed_dict={acc_inputX: batch_XA, acc_outputY: batch_Y, aud_inputX:batch_XB, aud_outputY:batch_Y, keep_prob:0.5})
+			train_step2.run(session=sess, feed_dict={aud_inputX:batch_XB, aud_outputY:batch_Y, keep_prob:0.5})
 
 			if j % BATCHSIZE == 0:
-				train_accuracy3 = accuracy3.eval(session=sess, feed_dict={acc_inputX: batch_XA, acc_outputY: batch_Y, aud_inputX: batch_XB, aud_outputY: batch_Y, keep_prob:1.0})	
-				bf.mLog("step %d, accuracy %g" % (j, train_accuracy3), logPath)
+				train_accuracy2 = accuracy2.eval(session=sess, feed_dict={acc_inputX: batch_XA, acc_outputY: batch_Y, aud_inputX: batch_XB, aud_outputY: batch_Y, keep_prob:1.0})	
+				bf.mLog("step %d, accuracy %g" % (j, train_accuracy2), logPath)
+				yPreTmp = tf.argmax(y_conv4, 1)
+				test_accuracy = accuracy3.eval(feed_dict={acc_inputX: acc_xTest, acc_outputY: acc_yTest, aud_inputX: aud_xTest, aud_outputY: aud_yTest, keep_prob: 1.0})
+				bf.mLog("test accuracy %g" % test_accuracy, logPath)
+				#bf.mLog("AUD step %d, All accuracy %g" % (j, train_accuracy3), logPath)
+				#h1 = sess.run(y_conv1, feed_dict={acc_inputX: batch_XA, acc_outputY: batch_Y, aud_inputX: batch_XB, aud_outputY: batch_Y, keep_prob:1.0}) 
+				#h2 = sess.run(y_conv2, feed_dict={acc_inputX: batch_XA, acc_outputY: batch_Y, aud_inputX: batch_XB, aud_outputY: batch_Y, keep_prob:1.0}) 
+				#h3 = sess.run(y_conv3, feed_dict={acc_inputX: batch_XA, acc_outputY: batch_Y, aud_inputX: batch_XB, aud_outputY: batch_Y, keep_prob:1.0}) 
+		
+		for j in range(25001):
+			batch_X, batch_Y = bf.getBatchData(BATCHSIZE, xTrain, yTrain)
+			batch_XA = batch_X[:,0:numTotalAcc]
+			batch_XB = batch_X[:,numTotalAcc : numTotalAcc + numTotalAud]
+			train_step1.run(session=sess, feed_dict={acc_inputX: batch_XA, acc_outputY: batch_Y, keep_prob:0.5})
+
+			if j % BATCHSIZE == 0:
+				train_accuracy1 = accuracy1.eval(session=sess, feed_dict={acc_inputX: batch_XA, acc_outputY: batch_Y, aud_inputX: batch_XB, aud_outputY: batch_Y, keep_prob:1.0})	
+				bf.mLog("step %d, accuracy %g" % (j, train_accuracy1), logPath)
 				yPreTmp = tf.argmax(y_conv4, 1)
 				test_accuracy = accuracy3.eval(feed_dict={acc_inputX: acc_xTest, acc_outputY: acc_yTest, aud_inputX: aud_xTest, aud_outputY: aud_yTest, keep_prob: 1.0})
 				bf.mLog("test accuracy %g" % test_accuracy, logPath)
