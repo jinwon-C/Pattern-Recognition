@@ -2,10 +2,10 @@
 
 1. onlyAcc.py  
 Accelerometer data만 50,000번 학습시키는 모델
-
+---
 1. onlyAud.py  
 STFT audio data만 15,000번 학습시키는 모델
-
+---
 1. modelAdd.py  
 STFT audio data로 6,000번 학습 후, 
 Accelerometer data로 20,000번 학습시키는 모델 
