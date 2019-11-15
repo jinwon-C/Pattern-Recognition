@@ -1,7 +1,7 @@
 # 다음 파일을 수정할 것
 
-1. onlyAcc.py  
-Accelerometer data만 50,000번 학습시키는 모델
+## onlyAcc.py  
+### Accelerometer data만 50,000번 학습시키는 모델
 ---
 1. onlyAud.py  
 STFT audio data만 15,000번 학습시키는 모델
