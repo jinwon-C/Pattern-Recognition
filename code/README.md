@@ -1,4 +1,4 @@
-# 다음 파일을 수정할 것
+# 주요 파일 목록
 
 ## onlyAcc.py  
 Accelerometer data만 50,000번 학습시키는 모델
