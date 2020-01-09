@@ -293,8 +293,10 @@ if __name__ == "__main__":
 		aud_xTrain = array(aud_xTrain).reshape(len(aud_xTrain), numTotalAud)
 		aud_yTrain = array(aud_yTrain).reshape(len(aud_yTrain), numLabel)
 
+		print(len(xTrain))
 		xTrain = array(xTrain).reshape(len(xTrain), numTotalAcc + numTotalAud)
 		yTrain = array(yTrain).reshape(len(yTrain), numLabel)
+		print(len(xTrain), len(xTrain[0]))
 
 		bf.mLog("training Start", logPath)
 		cTime = time.localtime()
