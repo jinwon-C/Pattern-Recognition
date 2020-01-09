@@ -149,8 +149,10 @@ for j in range(0, KFOLD):
 #	f_val_result = open(result_dir+'/val_result3_'+str(date)+'_'+str(j)+'.txt','w')
 #	f_pre_result = open(result_dir+'/pre_result3_'+str(date)+'_'+str(j)+'.txt','w')
 	
+	print(len(xTest))
 	xTest = np.asarray(xTest)
 	xTest = xTest.reshape(160,num_data, freq_slice)
+	print(len(xTest))
 	yTest = np.asarray(yTest)
 	yTest = ld.OneAndHot(yTest, Kind)
 
