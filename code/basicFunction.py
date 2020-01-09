@@ -40,41 +40,6 @@ def oneHotLabel(label, numLabel):
 
     return result
 
-def audRead(filePath, fileName, label):
-    dFile = open(filePath + fileName, 'r')
-    csvReader = csv.reader(dFile)
-    accData = []
-    audioData = []
-    reData = []
-
-    for csvData in csvReader:  
-        accData = accData + csvData[0:1]
-        audioData = audioData + csvData[1:2]
-    dFile.close()
-    reData.append(accData)
-    reData.append(audioData)
-    reData.append(label)
-    return reData
-
-def sampleSize(rawData, sampleSize):
-    reData = []
-    for rDataset in rawData:
-        rawData = rDataset[0]
-        rawData2 = rDataset[1]
-        label = rDataset[2]
-
-        data = []
-        tmp = []
-
-        for index in range(8630):
-            tmp.append(rawData[0])
-            tmp.append(rawData2[0])
-        data = tmp + rawData
-
-        data.append(label)
-        reData.append(data)
-    return reData
-
 def onlyFileRead(filePath, fileName, label):
     dFile = open(filePath + fileName, 'r')
     csvReader = csv.reader(dFile)
@@ -84,34 +49,25 @@ def onlyFileRead(filePath, fileName, label):
     rawDataZ = []
     audioData = []
     reData = []
-    
-    abs_data=[]
-    imag_data=[]
 
     for csvData in csvReader:
-#        count = csvData[2:3]    
-#        if len(count[0]):
-#            rawDataX = rawDataX + csvData[2:3]
-#            rawDataY = rawDataY + csvData[3:4]
-#            rawDataZ = rawDataZ + csvData[4:5]
-#
-#        count = csvData[5:6]
-#        if len(count[0]):
-#            audioData = audioData + csvData[5:6]
-#
-#    dFile.close()
-#    reData.append(rawDataX)
-#    reData.append(rawDataY)
-#    reData.append(rawDataZ)
-#    reData.append(label)
-#    reData.append(audioData)
-        count = csvData[1:2]
+        count = csvData[2:3]    
         if len(count[0]):
-            abs_data = abs_data + csvData[0:1]
-            imag_data = imag_data + csvData[1:2]
+            rawDataX = rawDataX + csvData[2:3]
+            rawDataY = rawDataY + csvData[3:4]
+            rawDataZ = rawDataZ + csvData[4:5]
+
+        count = csvData[5:6]
+        if len(count[0]):
+            audioData = audioData + csvData[5:6]
+
     dFile.close()
-    reData.append(abs_data)
-    reData.append(imag_data)
+    reData.append(rawDataX)
+    reData.append(rawDataY)
+    reData.append(rawDataZ)
+    reData.append(label)
+    reData.append(audioData)
+
     return reData
 
 def onlySampleSize(rawData, sampleSize):
